@@ -15,6 +15,9 @@
  */
 package com.vaadin.flow.signals.shared;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -297,6 +300,79 @@ public class SharedListSignal<T extends @Nullable Object>
                 new SignalCommand.InsertCommand(Id.random(), id(), null,
                         toJson(value), Objects.requireNonNull(at)),
                 this::child);
+    }
+
+    /**
+     * Inserts all values as the last entries in this list. All inserts are
+     * performed within a single transaction for atomicity.
+     * <p>
+     * Individual null values are permitted if the element type allows null.
+     *
+     * @param values
+     *            the values to insert, not <code>null</code>
+     * @return an unmodifiable list of insert operations for the inserted
+     *         entries
+     */
+    public List<InsertOperation<SharedValueSignal<T>>> insertAllLast(
+            Collection<? extends T> values) {
+        return insertAllAt(values, ListPosition.last());
+    }
+
+    /**
+     * Inserts all values as the first entries in this list, preserving the
+     * order of the provided collection. All inserts are performed within a
+     * single transaction for atomicity.
+     * <p>
+     * Individual null values are permitted if the element type allows null.
+     *
+     * @param values
+     *            the values to insert, not <code>null</code>
+     * @return an unmodifiable list of insert operations for the inserted
+     *         entries
+     */
+    public List<InsertOperation<SharedValueSignal<T>>> insertAllFirst(
+            Collection<? extends T> values) {
+        return insertAllAt(values, ListPosition.first());
+    }
+
+    /**
+     * Inserts all values at the given position in this list, preserving the
+     * order of the provided collection. All inserts are performed within a
+     * single transaction for atomicity.
+     * <p>
+     * Each element is inserted immediately after the previously inserted
+     * element, so the final order matches the iteration order of the provided
+     * collection.
+     * <p>
+     * Individual null values are permitted if the element type allows null.
+     *
+     * @param values
+     *            the values to insert, not <code>null</code>
+     * @param at
+     *            the position at which to insert the first value, not
+     *            <code>null</code>
+     * @return an unmodifiable list of insert operations for the inserted
+     *         entries
+     */
+    public List<InsertOperation<SharedValueSignal<T>>> insertAllAt(
+            Collection<? extends T> values, ListPosition at) {
+        Objects.requireNonNull(values, "Values must not be null");
+        Objects.requireNonNull(at, "Position must not be null");
+        if (values.isEmpty()) {
+            return List.of();
+        }
+        return Objects.requireNonNull(Signal.runInTransaction(() -> {
+            List<InsertOperation<SharedValueSignal<T>>> ops = new ArrayList<>(
+                    values.size());
+            ListPosition currentPos = at;
+            for (T value : values) {
+                InsertOperation<SharedValueSignal<T>> op = insertAt(value,
+                        currentPos);
+                ops.add(op);
+                currentPos = ListPosition.after(op.signal());
+            }
+            return Collections.unmodifiableList(ops);
+        }).returnValue());
     }
 
     /**
