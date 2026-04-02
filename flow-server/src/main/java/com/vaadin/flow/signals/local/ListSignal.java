@@ -192,6 +192,13 @@ public class ListSignal<T extends @Nullable Object>
         }
     }
 
+    /**
+     * Inserts a new entry holding the given value at the specified index and updates the list state.
+     *
+     * @param index the position at which to insert the new entry
+     * @param value the value for the new entry
+     * @return the created {@code ValueSignal<T>} representing the inserted entry
+     */
     private ValueSignal<T> insertAtInternal(int index, T value) {
         assertLockHeld();
         ValueSignal<T> entry = new ValueSignal<>(value, equalityChecker);
@@ -202,6 +209,12 @@ public class ListSignal<T extends @Nullable Object>
         return entry;
     }
 
+    /**
+     * Creates a ValueSignal for each element in the given collection, preserving the collection's iteration order.
+     *
+     * @param values the source collection of values to wrap in ValueSignal instances; must not be null
+     * @return a list containing the newly created ValueSignal instances in the same iteration order as {@code values}
+     */
     private List<ValueSignal<T>> createSignals(Collection<? extends T> values) {
         List<ValueSignal<T>> signals = new ArrayList<>(values.size());
         for (T value : values) {
@@ -251,26 +264,22 @@ public class ListSignal<T extends @Nullable Object>
     }
 
     /**
-     * Inserts all values at the given index in this list, preserving the order
-     * of the provided collection. All entries are added with a single change
-     * notification.
-     * <p>
-     * Individual null values are permitted if the element type allows null.
-     * <p>
-     * <b>Note:</b> This method should only be used in non-concurrent cases
-     * where the list structure is not being modified by other threads. The
-     * index is sensitive to concurrent modifications and may lead to unexpected
-     * results if the list is modified between determining the index and calling
-     * this method.
-     *
-     * @param index
-     *            the index at which to insert (0 for first, size() for last)
-     * @param values
-     *            the values to insert, not <code>null</code>
-     * @return an unmodifiable list of signals for the inserted entries
-     * @throws IndexOutOfBoundsException
-     *             if index is negative or greater than size()
-     */
+         * Insert all provided values at the specified index, preserving their iteration order.
+         *
+         * <p>Individual null elements are allowed when the element type permits null. All
+         * inserted entries are published with a single structural change notification.
+         * <b>Note:</b> This method is not safe for concurrent structural modifications:
+         * the provided index is evaluated against the current list and may be invalidated
+         * by concurrent changes.</p>
+         *
+         * @param index
+         *            the index at which to insert (0 for first, size() for last)
+         * @param values
+         *            the values to insert, not <code>null</code>
+         * @return an unmodifiable list of signals for the inserted entries
+         * @throws IndexOutOfBoundsException
+         *             if index is negative or greater than size()
+         */
     public List<ValueSignal<T>> insertAllAt(int index,
             Collection<? extends T> values) {
         Objects.requireNonNull(values, "Values must not be null");
@@ -292,6 +301,15 @@ public class ListSignal<T extends @Nullable Object>
         }
     }
 
+    /**
+     * Inserts signals for the given values at the specified index and updates the
+     * underlying list atomically. Requires the signal lock to be held by the caller.
+     *
+     * @param index  position at which the new entries will be inserted (0 ≤ index ≤ current size)
+     * @param values collection of values whose corresponding entry signals will be created and inserted,
+     *               preserving iteration order
+     * @return an unmodifiable list of the newly created `ValueSignal<T>` instances, in insertion order
+     */
     private List<ValueSignal<T>> insertAllAtInternal(int index,
             Collection<? extends T> values) {
         assertLockHeld();

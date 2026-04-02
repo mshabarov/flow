@@ -284,15 +284,13 @@ public class SharedListSignal<T extends @Nullable Object>
     }
 
     /**
-     * Inserts a value at the given position in this list. The operation fails
-     * if the position is not valid at the time when the operation is processed.
+     * Insert the given value into this list at the specified position.
      *
-     * @param value
-     *            the value to insert
-     * @param at
-     *            the insert position, not <code>null</code>
-     * @return an operation containing a signal for the inserted entry and the
-     *         eventual result
+     * The insert command will fail if the position is not valid when the command is processed.
+     *
+     * @param value the value to insert
+     * @param at the insert position; must not be {@code null}
+     * @return an insert operation containing the child signal for the newly inserted entry and the operation result
      */
     public InsertOperation<SharedValueSignal<T>> insertAt(T value,
             ListPosition at) {
