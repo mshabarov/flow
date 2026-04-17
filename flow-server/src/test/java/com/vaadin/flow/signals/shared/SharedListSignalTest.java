@@ -464,6 +464,107 @@ class SharedListSignalTest extends SignalTestBase {
         assertThrows(IllegalStateException.class, () -> stream.toList());
     }
 
+    @Test
+    void insertAllLast_multipleValues_valuesAppended() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        List<InsertOperation<SharedValueSignal<String>>> ops = signal
+                .insertAllLast(List.of("a", "b", "c"));
+
+        assertEquals(3, ops.size());
+        assertChildren(signal, "existing", "a", "b", "c");
+    }
+
+    @Test
+    void insertAllLast_emptyCollection_noChange() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        List<InsertOperation<SharedValueSignal<String>>> ops = signal
+                .insertAllLast(List.of());
+
+        assertTrue(ops.isEmpty());
+        assertChildren(signal, "existing");
+    }
+
+    @Test
+    void insertAllLast_singleNotification() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+
+        AtomicInteger changeCount = new AtomicInteger();
+        Usage usage = UsageTracker.track(signal::get);
+        usage.onNextChange(initial -> {
+            changeCount.incrementAndGet();
+            return true;
+        });
+
+        signal.insertAllLast(List.of("a", "b", "c"));
+
+        assertEquals(1, changeCount.get());
+    }
+
+    @Test
+    void insertAllAt_validPosition_valuesInserted() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        SharedValueSignal<String> first = signal.insertLast("first").signal();
+        signal.insertLast("last");
+
+        List<InsertOperation<SharedValueSignal<String>>> ops = signal
+                .insertAllAt(List.of("a", "b"), ListPosition.after(first));
+
+        assertEquals(2, ops.size());
+        assertChildren(signal, "first", "a", "b", "last");
+    }
+
+    @Test
+    void insertAllFirst_emptyCollection_noChange() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        List<InsertOperation<SharedValueSignal<String>>> ops = signal
+                .insertAllFirst(List.of());
+
+        assertTrue(ops.isEmpty());
+        assertChildren(signal, "existing");
+    }
+
+    @Test
+    void insertAllFirst_multipleValues_valuesAtStart() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        List<InsertOperation<SharedValueSignal<String>>> ops = signal
+                .insertAllFirst(List.of("a", "b", "c"));
+
+        assertEquals(3, ops.size());
+        assertChildren(signal, "a", "b", "c", "existing");
+    }
+
+    @Test
+    void insertAllLast_insideExplicitTransaction_valuesAppended() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        Signal.runInTransaction(() -> {
+            signal.insertAllLast(List.of("a", "b"));
+        });
+
+        assertChildren(signal, "existing", "a", "b");
+    }
+
+    @Test
+    void insertAllFirst_insideExplicitTransaction_valuesAtStart() {
+        SharedListSignal<String> signal = new SharedListSignal<>(String.class);
+        signal.insertLast("existing");
+
+        Signal.runInTransaction(() -> {
+            signal.insertAllFirst(List.of("a", "b"));
+        });
+
+        assertChildren(signal, "a", "b", "existing");
+    }
+
     static void assertChildren(SharedListSignal<String> signal,
             String... expectedValue) {
         List<String> value = signal.peek().stream().map(SharedValueSignal::peek)
